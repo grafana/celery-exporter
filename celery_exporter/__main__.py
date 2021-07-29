@@ -63,6 +63,13 @@ LOG_FORMAT = "[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
     help="Periodically enable Celery events.",
 )
 @click.option(
+    "--queues",
+    "-q",
+    multiple=True,
+    allow_from_autoenv=False,
+    help="Celery queues to monitor for length",
+)
+@click.option(
     "--use-ssl",
     is_flag=True,
     help="Enable SSL usage on broker connection if redis or amqp.",
@@ -109,6 +116,7 @@ def main(
     namespace,
     transport_options,
     enable_events,
+    queues,
     use_ssl,
     ssl_verify,
     ssl_ca_certs,
@@ -154,6 +162,7 @@ def main(
         namespace,
         transport_options,
         enable_events,
+        queues,
         broker_use_ssl,
     )
 
