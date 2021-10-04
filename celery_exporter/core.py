@@ -34,7 +34,9 @@ class CeleryExporter:
 
         self._app = celery.Celery(broker=broker_url, broker_use_ssl=broker_use_ssl)
         # need to set accept_content since 5.1.0: https://github.com/celery/celery/pull/6757
-        self._app.conf.update(accept_content=["pickle"])
+        # celery <5.1.0: self._app.control.ping returns json content
+        # celery 5.1.0+: self._app.control.ping returns pickle content
+        self._app.conf.update(accept_content=["pickle", "json"])
         self._app.conf.broker_transport_options = transport_options or {}
 
     def start(self):
