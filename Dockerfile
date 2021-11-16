@@ -26,6 +26,8 @@ COPY src/ ./src
 COPY celery_exporter/  ./celery_exporter/
 
 RUN RUSTFLAGS="-C target-feature=-crt-static" maturin build --target `apk --print-arch`-unknown-linux-musl --release --manylinux off -o /src/wheelhouse
+# hiredis requires gcc, so build the wheel here
+RUN pip wheel hiredis -w /src/wheelhouse
 
 FROM base-image as app
 LABEL maintainer="Fabio Todaro <fbregist@gmail.com>"
