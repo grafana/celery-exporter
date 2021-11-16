@@ -17,7 +17,7 @@ RUN apk add --no-cache alpine-sdk bash && \
     chmod +x ./rustup-init && \
     ./rustup-init -y --no-modify-path --default-toolchain stable --default-host `apk --print-arch`-unknown-linux-musl && \
     rm -rf rustup-init && \
-    bash -c 'wget "https://github.com/PyO3/maturin/releases/download/v0.8.3/maturin-$(apk --print-arch)-unknown-linux-musl.tar.gz" -O maturin.tar.gz' && \
+    bash -c 'wget "https://github.com/PyO3/maturin/releases/download/v0.11.5/maturin-$(apk --print-arch)-unknown-linux-musl.tar.gz" -O maturin.tar.gz' && \
     tar -C /usr/local/cargo/bin -zxf maturin.tar.gz && \
     rm -rf maturin.tar.gz
 
