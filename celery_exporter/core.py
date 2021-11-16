@@ -5,6 +5,7 @@ import prometheus_client
 
 from .monitor import (
     EnableEventsThread,
+    QueueLengthMonitoringThread,
     TaskThread,
     WorkerMonitoringThread,
     setup_metrics,
@@ -22,12 +23,14 @@ class CeleryExporter:
         namespace="celery",
         transport_options=None,
         enable_events=False,
+        queues=None,
         broker_use_ssl=None,
     ):
         self._listen_address = listen_address
         self._max_tasks = max_tasks
         self._namespace = namespace
         self._enable_events = enable_events
+        self._queues = queues
 
         self._app = celery.Celery(broker=broker_url, broker_use_ssl=broker_use_ssl)
         self._app.conf.broker_transport_options = transport_options or {}
@@ -45,6 +48,11 @@ class CeleryExporter:
         )
         t.daemon = True
         t.start()
+
+        if self._queues:
+            q = QueueLengthMonitoringThread(app=self._app, queue_list=self._queues)
+            q.daemon = True
+            q.start()
 
         w = WorkerMonitoringThread(app=self._app, namespace=self._namespace)
         w.daemon = True

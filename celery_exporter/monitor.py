@@ -1,3 +1,4 @@
+import amqp
 import collections
 import logging
 import threading
@@ -6,9 +7,10 @@ from itertools import chain
 
 import celery
 import celery.states
+from celery.utils.objects import FallbackContext
 
 from .celery_exporter import CeleryState
-from .metrics import LATENCY, TASKS, TASKS_RUNTIME, WORKERS
+from .metrics import LATENCY, QUEUE_LENGTH, TASKS, TASKS_RUNTIME, WORKERS
 from .utils import get_config
 
 
@@ -107,6 +109,43 @@ class EnableEventsThread(threading.Thread):
 
     def enable_events(self):
         self._app.control.enable_events()
+
+
+class QueueLengthMonitoringThread(threading.Thread):
+    periodicity_seconds = 5
+
+    def __init__(self, app, queue_list):
+        self.celery_app = app
+        self.queue_list = queue_list
+        self.connection = self.celery_app.connection_or_acquire()
+
+        if isinstance(self.connection, FallbackContext):
+            self.connection = self.connection.fallback()
+
+        super(QueueLengthMonitoringThread, self).__init__()
+
+    def measure_queues_length(self):
+        for queue in self.queue_list:
+            try:
+                length = self.connection.default_channel.queue_declare(
+                    queue=queue, passive=True
+                ).message_count
+
+            except (amqp.exceptions.ChannelError,) as e:
+                # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as a missing queue.
+                if "NOT_FOUND" not in str(e):
+                    logging.warning(f"Unexpected error fetching queue: '{queue}': {e}")
+                length = 0
+
+            self.set_queue_length(queue, length)
+
+    def set_queue_length(self, queue, length):
+        QUEUE_LENGTH.labels(queue).set(length)
+
+    def run(self):  # pragma: no cover
+        while True:
+            self.measure_queues_length()
+            time.sleep(self.periodicity_seconds)
 
 
 def setup_metrics(app, namespace):
