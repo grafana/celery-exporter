@@ -1,4 +1,4 @@
 -r requirements_celery.txt
-celery==5.1.2
-kombu==5.1.0
+celery==5.2.3
+kombu==5.2.3
 vine==5.0.0
