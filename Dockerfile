@@ -1,4 +1,4 @@
-FROM python:3.6-alpine as base-image
+FROM python:3.10-alpine as base-image
 
 ENV LANG=C.UTF-8
 
