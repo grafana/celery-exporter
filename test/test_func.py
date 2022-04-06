@@ -9,7 +9,7 @@ from celery.app.control import Inspect
 prom_http_server_mock = MagicMock(return_value=None)
 setup_metrics_mock = MagicMock(return_value=None)
 task_thread_mock = MagicMock(spec=celery_exporter.monitor.TaskThread)
-worker_thread_mock = MagicMock(spec=celery_exporter.monitor.WorkerMonitoringThread)
+worker_collector_mock = MagicMock(spec=celery_exporter.monitor.WorkerCollector)
 event_thread_mock = MagicMock(spec=celery_exporter.monitor.EnableEventsThread)
 
 
@@ -19,7 +19,7 @@ event_thread_mock = MagicMock(spec=celery_exporter.monitor.EnableEventsThread)
 )
 @patch("celery_exporter.core.setup_metrics", setup_metrics_mock)
 @patch("celery_exporter.core.TaskThread", task_thread_mock)
-@patch("celery_exporter.core.WorkerMonitoringThread", worker_thread_mock)
+@patch("celery_exporter.core.WorkerCollector", worker_collector_mock)
 @patch("celery_exporter.core.EnableEventsThread", event_thread_mock)
 class TestCeleryExporter(BaseTest):
     def setUp(self):
@@ -51,7 +51,7 @@ class TestCeleryExporter(BaseTest):
 
     def test_worker_thread(self):
         self.cel_exp.start()
-        worker_thread_mock.assert_called_with(
+        worker_collector_mock.assert_called_with(
             self.cel_exp._app, TestCeleryExporter.namespace
         )
 

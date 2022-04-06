@@ -10,7 +10,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from celery_exporter.monitor import (
-    WorkerMonitoringThread,
+    WorkerCollector,
     TaskThread,
     EnableEventsThread,
     setup_metrics,
@@ -44,12 +44,6 @@ class TestMockedCelery(BaseTest):
         self._assert_task_states(celery.states.ALL_STATES, 0)
         assert (
             REGISTRY.get_sample_value(
-                "celery_workers", labels=dict(namespace=self.namespace)
-            )
-            == 0
-        )
-        assert (
-            REGISTRY.get_sample_value(
                 "celery_tasks_latency_seconds_count",
                 labels=dict(namespace=self.namespace, name=self.task, queue=self.queue),
             )
@@ -64,18 +58,11 @@ class TestMockedCelery(BaseTest):
         )
 
     def test_workers_count(self):
-        assert (
-            REGISTRY.get_sample_value(
-                "celery_workers", labels=dict(namespace=self.namespace)
-            )
-            == 0
-        )
-
         with patch.object(self.app.control, "ping") as mock_ping:
-            w = WorkerMonitoringThread(app=self.app, namespace=self.namespace)
+            w = WorkerCollector(app=self.app, namespace=self.namespace)
+            REGISTRY.register(w)
 
             mock_ping.return_value = []
-            w.update_workers_count()
             assert (
                 REGISTRY.get_sample_value(
                     "celery_workers", labels=dict(namespace=self.namespace)
@@ -84,7 +71,6 @@ class TestMockedCelery(BaseTest):
             )
 
             mock_ping.return_value = [0]  # 1 worker
-            w.update_workers_count()
             assert (
                 REGISTRY.get_sample_value(
                     "celery_workers", labels=dict(namespace=self.namespace)
@@ -93,7 +79,6 @@ class TestMockedCelery(BaseTest):
             )
 
             mock_ping.return_value = [0, 0]  # 2 workers
-            w.update_workers_count()
             assert (
                 REGISTRY.get_sample_value(
                     "celery_workers", labels=dict(namespace=self.namespace)
@@ -102,7 +87,6 @@ class TestMockedCelery(BaseTest):
             )
 
             mock_ping.return_value = []
-            w.update_workers_count()
             assert (
                 REGISTRY.get_sample_value(
                     "celery_workers", labels=dict(namespace=self.namespace)

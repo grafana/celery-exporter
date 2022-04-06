@@ -2,12 +2,13 @@ import logging
 
 import celery
 import prometheus_client
+from prometheus_client import REGISTRY
 
 from .monitor import (
     EnableEventsThread,
-    QueueLengthMonitoringThread,
+    QueueLengthCollector,
     TaskThread,
-    WorkerMonitoringThread,
+    WorkerCollector,
     setup_metrics,
 )
 
@@ -54,13 +55,11 @@ class CeleryExporter:
         t.start()
 
         if self._queues:
-            q = QueueLengthMonitoringThread(app=self._app, queue_list=self._queues)
-            q.daemon = True
-            q.start()
+            REGISTRY.register(
+                QueueLengthCollector(app=self._app, queue_list=self._queues)
+            )
 
-        w = WorkerMonitoringThread(app=self._app, namespace=self._namespace)
-        w.daemon = True
-        w.start()
+        REGISTRY.register(WorkerCollector(app=self._app, namespace=self._namespace))
 
         if self._enable_events:
             e = EnableEventsThread(app=self._app)
