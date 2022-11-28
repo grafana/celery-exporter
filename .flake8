@@ -1,0 +1,11 @@
+[flake8]
+max_line_length = 100
+ignore =
+    # E266 too many leading '#' for block comment
+    E266,
+    # B008 Do not perform function calls in argument defaults.
+    # This conflicts with FastAPI's idiomatic use of `Depends`.
+    B008,
+    # W503 line break before binary operator
+    # This is no longer recommended, see https://www.flake8rules.com/rules/W503.html.
+    W503,

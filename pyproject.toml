@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "celery-exporter"
+version = "2.0.0"
+description = "Prometheus metrics exporter for Celery 5"
+authors = ["Grafana ML"]
+
+[tool.poetry.dependencies]
+python = "^3.8.1"
+cachetools = ">=5.2.0"
+celery = {extras = ["redis"], version = ">=5.2.7"}
+prometheus-client = ">=0.14.1"
+redis = {extras = ["hiredis"], version = ">=4.3.4"}
+
+[tool.poetry.group.dev.dependencies]
+black = "22.10.0"
+coverage = "6.5.0"
+flake8 = "6.0.0"
+flake8-isort = "5.0.3"
+isort = "5.10.1"
+mypy = "0.991"
+pytest = "7.2.0"
+types-cachetools = "5.2.1"
+types-redis = "4.3.21.6"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+line_length = 100
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
