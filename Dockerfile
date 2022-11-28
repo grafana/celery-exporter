@@ -2,35 +2,39 @@ FROM python:3.10-alpine as base-image
 
 ENV LANG=C.UTF-8
 
-RUN apk add libgcc
-
-FROM base-image as build-rs
-
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH
-
+FROM base-image as build-wheels
+RUN apk add alpine-sdk
 WORKDIR /src
-
-RUN apk add --no-cache alpine-sdk bash && \
-    wget "https://sh.rustup.rs" -O rustup-init && \
-    chmod +x ./rustup-init && \
-    ./rustup-init -y --no-modify-path --default-toolchain stable --default-host `apk --print-arch`-unknown-linux-musl && \
-    rm -rf rustup-init && \
-    bash -c 'wget "https://github.com/PyO3/maturin/releases/download/v0.11.5/maturin-$(apk --print-arch)-unknown-linux-musl.tar.gz" -O maturin.tar.gz' && \
-    tar -C /usr/local/cargo/bin -zxf maturin.tar.gz && \
-    rm -rf maturin.tar.gz
-
-COPY Cargo.toml Cargo.lock README.md ./
-COPY src/ ./src
-COPY celery_exporter/  ./celery_exporter/
-
-RUN RUSTFLAGS="-C target-feature=-crt-static" maturin build --target `apk --print-arch`-unknown-linux-musl --release --manylinux off -o /src/wheelhouse
 # hiredis requires gcc, so build the wheel here
 RUN pip wheel hiredis -w /src/wheelhouse
 
+FROM build-wheels as dev
+WORKDIR /build
+COPY --from=build-wheels /src/wheelhouse/ /build/wheelhouse/
+RUN pip install wheelhouse/*
+
+COPY requirements/ ./requirements
+RUN pip install -r ./requirements/requirements_celery5.txt
+RUN pip install -r ./requirements/requirements_test.txt
+
+COPY celery_exporter/  ./celery_exporter/
+COPY test/  ./test/
+COPY tox.ini  ./tox.ini
+
 FROM base-image as app
 LABEL maintainer="Fabio Todaro <fbregist@gmail.com>"
+
+WORKDIR /build
+COPY --from=build-wheels /src/wheelhouse/ /build/wheelhouse/
+RUN pip install wheelhouse/*
+COPY requirements/ ./requirements
+RUN pip install -r ./requirements/requirements_celery5.txt
+
+WORKDIR /app
+COPY celery_exporter/  /app/celery_exporter/
+
+ENTRYPOINT ["python", "-m", "celery_exporter"]
+CMD []
 
 ARG BUILD_DATE
 ARG DOCKER_REPO
@@ -43,18 +47,6 @@ LABEL org.label-schema.schema-version="1.0" \
       org.label-schema.version=$VERSION \
       org.label-schema.description="Prometheus metrics exporter for Celery" \
       org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.vcs-url="https://github.com/OvalMoney/celery-exporter"
-
-WORKDIR /app/
-
-COPY --from=build-rs /src/wheelhouse/ /app/wheelhouse/
-
-COPY requirements/ ./requirements
-RUN pip install -r ./requirements/requirements_celery5.txt
-
-RUN pip install wheelhouse/*
-
-ENTRYPOINT ["celery-exporter"]
-CMD []
+      org.label-schema.vcs-url="https://github.com/grafana/celery-exporter"
 
 EXPOSE 9540
