@@ -15,16 +15,11 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-all: clean test docker_build ## Clean and Build
+test: build_dev ## Run tests and coverage
+	docker run ${DOCKER_REPO}:dev \
+		/bin/ash -c "coverage run -m pytest && coverage report"
 
-clean: ## Clean folders
-	rm -rf dist/ *.egg-info
-
-test: ## Run tests and coverage
-	coverage run -m pytest test/ \
-  && coverage report
-
-docker_build: ## Build Docker file
+build: ## Build Docker file
 	export DOCKER_REPO
 	export DOCKER_VERSION
 
@@ -36,6 +31,19 @@ docker_build: ## Build Docker file
 		-f ./Dockerfile \
 		-t ${DOCKER_REPO}:${DOCKER_VERSION} \
 		.
+
+build_dev: ## Build development Docker file
+	docker build \
+		-f ./Dockerfile \
+		--target dev \
+		-t ${DOCKER_REPO}:dev \
+		.
+
+sh: build_dev ## Shell into development container
+	docker run -it ${DOCKER_REPO}:dev /bin/ash
+
+run: build ## Run in docker container
+	docker run -p 9540:9540 ${DOCKER_REPO}:${DOCKER_VERSION}
 
 help: ## Print this help
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
