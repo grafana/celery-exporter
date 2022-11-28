@@ -1,7 +1,7 @@
 import logging
 import threading
 import time
-from typing import Dict, Set
+from typing import Dict, List, Set
 
 import amqp
 import celery
@@ -21,7 +21,9 @@ class TaskThread(threading.Thread):
     exposed from Celery using its eventing system.
     """
 
-    def __init__(self, app, namespace, max_tasks_in_memory: int, *args, **kwargs):
+    def __init__(
+        self, app: celery.Celery, namespace: str, max_tasks_in_memory: int, *args, **kwargs
+    ):
         self._app = app
         self._namespace = namespace
         self.log = logging.getLogger("task-thread")
@@ -34,11 +36,11 @@ class TaskThread(threading.Thread):
     def run(self):  # pragma: no cover
         self._monitor()
 
-    def _process_event(self, evt):
-        (name, queue, latency) = self._state.latency(evt)
+    def _process_event(self, event: Dict):
+        (name, queue, latency) = self._state.latency(event)
         if latency is not None:
             LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(latency)
-        (name, state, runtime, queue) = self._state.collect(evt)
+        (name, state, runtime, queue) = self._state.collect(event)
 
         if name is not None:
             if runtime is not None:
@@ -65,7 +67,7 @@ class TaskThread(threading.Thread):
 class WorkerCollector(Collector):
     celery_ping_timeout_seconds = 5
 
-    def __init__(self, app, namespace):
+    def __init__(self, app: celery.Celery, namespace: str):
         self._app = app
         self._namespace = namespace
 
@@ -86,7 +88,7 @@ class WorkerCollector(Collector):
 class EnableEventsThread(threading.Thread):
     periodicity_seconds = 5
 
-    def __init__(self, app, *args, **kwargs):  # pragma: no cover
+    def __init__(self, app: celery.Celery, *args, **kwargs):  # pragma: no cover
         self._app = app
         self.log = logging.getLogger("enable-events-thread")
         super(EnableEventsThread, self).__init__(*args, **kwargs)
@@ -104,7 +106,7 @@ class EnableEventsThread(threading.Thread):
 
 
 class QueueLengthCollector(Collector):
-    def __init__(self, app, queue_list):
+    def __init__(self, app: celery.Celery, queue_list: List):
         self.celery_app = app
         self.queue_list = queue_list
         self.connection = self.celery_app.connection_or_acquire()
@@ -137,7 +139,7 @@ class QueueLengthCollector(Collector):
         yield gauge
 
 
-def setup_metrics(app, namespace):
+def setup_metrics(app: celery.Celery, namespace: str):
     """
     This initializes the available metrics with default values so that
     even before the first event is received, data can be exposed.
