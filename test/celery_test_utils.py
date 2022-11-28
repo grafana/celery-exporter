@@ -1,5 +1,6 @@
-import celery
 from unittest import TestCase
+
+import celery
 
 
 class BaseTest(TestCase):

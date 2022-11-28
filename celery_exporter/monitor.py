@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from typing import Dict, Set
 
 import amqp
 import celery
@@ -25,9 +26,9 @@ class TaskThread(threading.Thread):
         self._namespace = namespace
         self.log = logging.getLogger("task-thread")
         self._state = CeleryState.new(max_tasks_in_memory=max_tasks_in_memory)
-        self._known_states = set()
-        self._known_states_names = set()
-        self._tasks_started = dict()
+        self._known_states: Set = set()
+        self._known_states_names: Set = set()
+        self._tasks_started: Dict = dict()
         super(TaskThread, self).__init__(*args, **kwargs)
 
     def run(self):  # pragma: no cover
@@ -36,28 +37,22 @@ class TaskThread(threading.Thread):
     def _process_event(self, evt):
         (name, queue, latency) = self._state.latency(evt)
         if latency is not None:
-            LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(
-                latency
-            )
+            LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(latency)
         (name, state, runtime, queue) = self._state.collect(evt)
 
         if name is not None:
             if runtime is not None:
-                TASKS_RUNTIME.labels(
-                    namespace=self._namespace, name=name, queue=queue
-                ).observe(runtime)
+                TASKS_RUNTIME.labels(namespace=self._namespace, name=name, queue=queue).observe(
+                    runtime
+                )
 
-            TASKS.labels(
-                namespace=self._namespace, name=name, state=state, queue=queue
-            ).inc()
+            TASKS.labels(namespace=self._namespace, name=name, state=state, queue=queue).inc()
 
     def _monitor(self):  # pragma: no cover
         while True:
             try:
                 with self._app.connection() as conn:
-                    recv = self._app.events.Receiver(
-                        conn, handlers={"*": self._process_event}
-                    )
+                    recv = self._app.events.Receiver(conn, handlers={"*": self._process_event})
                     setup_metrics(self._app, self._namespace)
                     self.log.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
@@ -132,7 +127,8 @@ class QueueLengthCollector(Collector):
                 ).message_count
 
             except (amqp.exceptions.ChannelError,) as e:
-                # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as a missing queue.
+                # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as
+                # a missing queue.
                 if "NOT_FOUND" not in str(e):
                     logging.warning(f"Unexpected error fetching queue: '{queue}': {e}")
                 length = 0

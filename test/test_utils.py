@@ -1,7 +1,8 @@
 import ssl
+
 import pytest
 
-from celery_exporter.utils import get_transport_scheme, generate_broker_use_ssl
+from celery_exporter.utils import generate_broker_use_ssl, get_transport_scheme
 
 
 @pytest.mark.parametrize("brokers", [("redis://foo", "redis"), ("amqp://bar", "amqp")])
@@ -14,7 +15,7 @@ def test_generate_broker_use_ssl_no_ssl():
         generate_broker_use_ssl(
             False, "redis", "CERT_NONE", "path/ca.pem", "path/cert.pem", "path/key.pem"
         )
-        == None
+        is None
     )
 
 

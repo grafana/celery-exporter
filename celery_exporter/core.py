@@ -55,9 +55,7 @@ class CeleryExporter:
         t.start()
 
         if self._queues:
-            REGISTRY.register(
-                QueueLengthCollector(app=self._app, queue_list=self._queues)
-            )
+            REGISTRY.register(QueueLengthCollector(app=self._app, queue_list=self._queues))
 
         REGISTRY.register(WorkerCollector(app=self._app, namespace=self._namespace))
 

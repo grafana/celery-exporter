@@ -1,33 +1,23 @@
 from time import time
+from unittest.mock import patch
 
 import celery
 import celery.states
-
+from celery.app.control import Inspect
 from celery.events import Event
 from celery.utils import uuid
-from prometheus_client import REGISTRY
-from unittest import TestCase
-from unittest.mock import patch
-
-from celery_exporter.monitor import (
-    WorkerCollector,
-    TaskThread,
-    EnableEventsThread,
-    setup_metrics,
-)
-
-from celery_exporter.utils import CELERY_MISSING_DATA, get_config, _gen_wildcards
-
 from celery_test_utils import BaseTest, get_celery_app
+from prometheus_client import REGISTRY
+
+from celery_exporter.monitor import EnableEventsThread, TaskThread, WorkerCollector, setup_metrics
+from celery_exporter.utils import CELERY_MISSING_DATA, _gen_wildcards
 
 
 class TestMockedCelery(BaseTest):
     def setUp(self):
         self.app = get_celery_app()
-        with patch.object(celery.app.control.Inspect, "conf") as tasks:
-            with patch.object(
-                celery.app.control.Inspect, "registered_tasks"
-            ) as registered:
+        with patch.object(Inspect, "conf") as tasks:
+            with patch.object(Inspect, "registered_tasks") as registered:
                 tasks.return_value = {
                     "celery@d6f95e9e24fc": {
                         "task_routes": {"my_task": {}, "trial": {"queue": "deadbeef"}}
@@ -64,33 +54,25 @@ class TestMockedCelery(BaseTest):
 
             mock_ping.return_value = []
             assert (
-                REGISTRY.get_sample_value(
-                    "celery_workers", labels=dict(namespace=self.namespace)
-                )
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 0
             )
 
             mock_ping.return_value = [0]  # 1 worker
             assert (
-                REGISTRY.get_sample_value(
-                    "celery_workers", labels=dict(namespace=self.namespace)
-                )
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 1
             )
 
             mock_ping.return_value = [0, 0]  # 2 workers
             assert (
-                REGISTRY.get_sample_value(
-                    "celery_workers", labels=dict(namespace=self.namespace)
-                )
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 2
             )
 
             mock_ping.return_value = []
             assert (
-                REGISTRY.get_sample_value(
-                    "celery_workers", labels=dict(namespace=self.namespace)
-                )
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 0
             )
 
@@ -101,9 +83,7 @@ class TestMockedCelery(BaseTest):
         latency_before_started = 123.45
         runtime = 234.5
 
-        m = TaskThread(
-            app=self.app, namespace=self.namespace, max_tasks_in_memory=self.max_tasks
-        )
+        m = TaskThread(app=self.app, namespace=self.namespace, max_tasks_in_memory=self.max_tasks)
 
         self._assert_task_states(celery.states.ALL_STATES, 0)
         assert (
@@ -299,12 +279,7 @@ class TestMockedCelery(BaseTest):
                 namespace=self.namespace, name=self.task, state=state, queue=self.queue
             )
 
-            assert (
-                REGISTRY.get_sample_value(
-                    "celery_tasks_total", labels=task_by_name_label
-                )
-                == cnt
-            )
+            assert REGISTRY.get_sample_value("celery_tasks_total", labels=task_by_name_label) == cnt
 
     def _assert_all_states(self, exclude):
         self._assert_task_states(celery.states.ALL_STATES - exclude, 0)

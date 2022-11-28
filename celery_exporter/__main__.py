@@ -76,39 +76,27 @@ LOG_FORMAT = "[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
 )
 @click.option(
     "--ssl-verify",
-    type=click.Choice(
-        ["CERT_NONE", "CERT_OPTIONAL", "CERT_REQUIRED"], case_sensitive=True
-    ),
+    type=click.Choice(["CERT_NONE", "CERT_OPTIONAL", "CERT_REQUIRED"], case_sensitive=True),
     default="CERT_REQUIRED",
     help="SSL verify mode.",
 )
 @click.option(
     "--ssl-ca-certs",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, writable=False, readable=True
-    ),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
     help="SSL path to the CA certificate.",
 )
 @click.option(
     "--ssl-certfile",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, writable=False, readable=True
-    ),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
     help="SSL path to the Client Certificate.",
 )
 @click.option(
     "--ssl-keyfile",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, writable=False, readable=True
-    ),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
     help="SSL path to the Client Key.",
 )
-@click.option(
-    "--tz", type=str, allow_from_autoenv=False, help="Timezone used by the celery app."
-)
-@click.option(
-    "--verbose", is_flag=True, allow_from_autoenv=False, help="Enable verbose logging."
-)
+@click.option("--tz", type=str, allow_from_autoenv=False, help="Timezone used by the celery app.")
+@click.option("--verbose", is_flag=True, allow_from_autoenv=False, help="Enable verbose logging.")
 def main(
     broker_url,
     listen_address,
@@ -140,9 +128,7 @@ def main(
             transport_options = json.loads(transport_options)
         except ValueError:
             logging.error(
-                "Error parsing broker transport options from JSON '{}'".format(
-                    transport_options
-                )
+                "Error parsing broker transport options from JSON '{}'".format(transport_options)
             )
             sys.exit(1)
 

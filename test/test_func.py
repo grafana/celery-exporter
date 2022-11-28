@@ -1,10 +1,10 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from celery.app.control import Inspect
 from celery_test_utils import BaseTest
 
-import celery
 import celery_exporter.monitor
 from celery_exporter.core import CeleryExporter
-from celery.app.control import Inspect
 
 prom_http_server_mock = MagicMock(return_value=None)
 setup_metrics_mock = MagicMock(return_value=None)
@@ -14,9 +14,7 @@ event_thread_mock = MagicMock(spec=celery_exporter.monitor.EnableEventsThread)
 
 
 @patch.object(Inspect, "registered_tasks", {"worker1": [BaseTest.task]})
-@patch(
-    "celery_exporter.core.prometheus_client.start_http_server", prom_http_server_mock
-)
+@patch("celery_exporter.core.prometheus_client.start_http_server", prom_http_server_mock)
 @patch("celery_exporter.core.setup_metrics", setup_metrics_mock)
 @patch("celery_exporter.core.TaskThread", task_thread_mock)
 @patch("celery_exporter.core.WorkerCollector", worker_collector_mock)
@@ -33,9 +31,7 @@ class TestCeleryExporter(BaseTest):
 
     def test_setup_metrics(self):
         self.cel_exp.start()
-        setup_metrics_mock.assert_called_with(
-            self.cel_exp._app, TestCeleryExporter.namespace
-        )
+        setup_metrics_mock.assert_called_with(self.cel_exp._app, TestCeleryExporter.namespace)
 
     def test_http_server(self):
         self.cel_exp.start()
@@ -51,9 +47,7 @@ class TestCeleryExporter(BaseTest):
 
     def test_worker_thread(self):
         self.cel_exp.start()
-        worker_collector_mock.assert_called_with(
-            self.cel_exp._app, TestCeleryExporter.namespace
-        )
+        worker_collector_mock.assert_called_with(self.cel_exp._app, TestCeleryExporter.namespace)
 
     def test_event_thread(self):
         self.cel_exp.start()
