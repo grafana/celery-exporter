@@ -20,7 +20,7 @@ class CeleryExporter:
         self,
         broker_url,
         listen_address,
-        max_tasks=10000,
+        max_tasks: int = 10000,
         namespace="celery",
         transport_options=None,
         enable_events=False,
