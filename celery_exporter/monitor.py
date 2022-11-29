@@ -9,7 +9,7 @@ from celery.utils.objects import FallbackContext
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
-from .celery_exporter import CeleryState
+from .celery_state import CeleryState
 from .metrics import LATENCY, TASKS, TASKS_RUNTIME
 from .utils import get_config
 
@@ -20,11 +20,11 @@ class TaskThread(threading.Thread):
     exposed from Celery using its eventing system.
     """
 
-    def __init__(self, app, namespace, max_tasks_in_memory, *args, **kwargs):
+    def __init__(self, app, namespace, max_tasks_in_memory: int, *args, **kwargs):
         self._app = app
         self._namespace = namespace
         self.log = logging.getLogger("task-thread")
-        self._state = CeleryState(max_tasks_in_memory=max_tasks_in_memory)
+        self._state = CeleryState.new(max_tasks_in_memory=max_tasks_in_memory)
         self._known_states = set()
         self._known_states_names = set()
         self._tasks_started = dict()
