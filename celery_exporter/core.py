@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, Optional, Union
 
 import celery
 import prometheus_client
@@ -18,14 +19,14 @@ __all__ = ("CeleryExporter",)
 class CeleryExporter:
     def __init__(
         self,
-        broker_url,
-        listen_address,
+        broker_url: str,
+        listen_address: str,
         max_tasks: int = 10000,
-        namespace="celery",
-        transport_options=None,
-        enable_events=False,
-        queues=None,
-        broker_use_ssl=None,
+        namespace: str = "celery",
+        transport_options: Optional[Dict] = None,
+        enable_events: bool = False,
+        queues: Optional[Any] = None,
+        broker_use_ssl: Optional[Union[bool, Dict]] = None,
     ):
         self._listen_address = listen_address
         self._max_tasks = max_tasks
@@ -70,5 +71,5 @@ class CeleryExporter:
         thread.
         """
         host, port = self._listen_address.split(":")
-        logging.info("Starting HTTPD on {}:{}".format(host, port))
+        logging.info(f"Starting HTTPD on {host}:{port}")
         prometheus_client.start_http_server(int(port), host)

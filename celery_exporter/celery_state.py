@@ -10,6 +10,7 @@ CELERY_MISSING_DATA = "undefined"
 CollectOutcome = Tuple[Optional[str], Optional[str], Optional[float], Optional[str]]
 # name, queue, latency
 LatencyOutcome = Tuple[Optional[str], Optional[str], Optional[float]]
+Event = Dict  # Celery event only has type as the required field
 
 
 def is_task_event(kind: str) -> bool:
@@ -53,7 +54,7 @@ class Task:
     state: TaskState = TaskState.UNDEFINED
 
     @classmethod
-    def from_event(cls, event: Dict) -> "Task":
+    def from_event(cls, event: Event) -> "Task":
         kind: Optional[str] = event.get("type")
         if kind is None:
             raise ValueError("Invalid Event: missing type")
@@ -61,11 +62,11 @@ class Task:
             raise TypeError(f"Except type str for kind, found {type(kind)}")
 
         splitted = kind.split("-")
-        state = splitted[1]
+        state_str = splitted[1]
 
         if is_task_event(kind):
             uuid = event.get("uuid", CELERY_MISSING_DATA)
-            state = TaskState.from_event(state)
+            state = TaskState.from_event(state_str)
             local_received = event.get("local_received")
             if local_received is None:
                 raise ValueError("Invalid Event: missing local_received")
@@ -73,7 +74,6 @@ class Task:
                 raise TypeError(
                     f"Expected type float for local_received, found {type(local_received)}"
                 )
-            local_received = local_received
 
             name = event.get("name", CELERY_MISSING_DATA)
             runtime = event.get("runtime", cls.runtime)
@@ -112,7 +112,7 @@ class CeleryState:
         if task.state == TaskState.RECEIVED:
             self.task_count += 1
 
-    def collect(self, event: Dict) -> CollectOutcome:
+    def collect(self, event: Event) -> CollectOutcome:
         kind: Optional[str] = event.get("type")
         if kind is None:
             raise ValueError("Invalid Event: missing type")
@@ -147,7 +147,7 @@ class CeleryState:
             queue = self.queue_by_task.get(name, CELERY_MISSING_DATA)
             return (name, task.state.value, None, queue)
 
-    def latency(self, event: Dict) -> LatencyOutcome:
+    def latency(self, event: Event) -> LatencyOutcome:
         kind: Optional[str] = event.get("type")
         if kind is None:
             raise ValueError("Invalid Event: missing type")
