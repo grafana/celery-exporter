@@ -73,7 +73,6 @@ class Task:
                 raise TypeError(
                     f"Expected type float for local_received, found {type(local_received)}"
                 )
-            local_received = local_received
 
             name = event.get("name", CELERY_MISSING_DATA)
             runtime = event.get("runtime", cls.runtime)
