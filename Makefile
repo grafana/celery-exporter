@@ -44,6 +44,16 @@ run: build ## Run in docker container
 test: build_dev ## Run tests and coverage
 	$(docker_shell) "coverage run -m pytest && coverage report"
 
+static_analysis: build_dev ## Run mypy 
+	$(docker_shell) "mypy ."
+
+lint: build_dev ## Run flake8
+	$(docker_shell) "flake8"
+
+format: build_dev ## Apply black + isort formatting 
+	$(docker_shell) "black ."
+	$(docker_shell) "isort ."
+
 sh: build_dev ## Shell into development container
 	$(docker_shell) /bin/ash
 
