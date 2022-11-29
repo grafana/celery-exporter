@@ -50,6 +50,8 @@ static_analysis: build_dev ## Run mypy
 lint: build_dev ## Run flake8
 	$(docker_shell) "flake8"
 
+tests: static_analysis lint test ##  Run test and lint and static_analysis
+
 format: build_dev ## Apply black + isort formatting 
 	$(docker_shell) "black ."
 	$(docker_shell) "isort ."
