@@ -40,7 +40,7 @@ build_dev: ## Build development Docker file
 		.
 
 sh: build_dev ## Shell into development container
-	docker run -it ${DOCKER_REPO}:dev /bin/ash
+	docker run --rm -it ${DOCKER_REPO}:dev /bin/ash
 
 run: build ## Run in docker container
 	docker run -p 9540:9540 ${DOCKER_REPO}:${DOCKER_VERSION}
