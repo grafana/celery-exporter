@@ -1,4 +1,3 @@
-from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional, Tuple
@@ -100,7 +99,7 @@ class CeleryState:
         return cls(
             event_count=0,
             task_count=0,
-            queue_by_task=defaultdict(),
+            queue_by_task=dict(),
             tasks=LRUCache(maxsize=max_tasks_in_memory),
         )
 
