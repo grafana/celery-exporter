@@ -61,11 +61,11 @@ class Task:
             raise TypeError(f"Except type str for kind, found {type(kind)}")
 
         splitted = kind.split("-")
-        state = splitted[1]
+        state_str = splitted[1]
 
         if is_task_event(kind):
             uuid = event.get("uuid", CELERY_MISSING_DATA)
-            state = TaskState.from_event(state)
+            state = TaskState.from_event(state_str)
             local_received = event.get("local_received")
             if local_received is None:
                 raise ValueError("Invalid Event: missing local_received")
