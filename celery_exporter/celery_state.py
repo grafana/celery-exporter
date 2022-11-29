@@ -30,18 +30,19 @@ class TaskState(Enum):
 
     @classmethod
     def from_event(cls, event_kind: str) -> "TaskState":
-        MAPPING = {
-            "sent": TaskState.PENDING,
-            "received": TaskState.RECEIVED,
-            "started": TaskState.STARTED,
-            "failed": TaskState.FAILURE,
-            "retried": TaskState.RETRY,
-            "succeeded": TaskState.SUCCESS,
-            "revoked": TaskState.REVOKED,
-            "rejected": TaskState.REJECTED,
-        }
-
         return MAPPING.get(event_kind, TaskState.UNDEFINED)
+
+
+MAPPING = {
+    "sent": TaskState.PENDING,
+    "received": TaskState.RECEIVED,
+    "started": TaskState.STARTED,
+    "failed": TaskState.FAILURE,
+    "retried": TaskState.RETRY,
+    "succeeded": TaskState.SUCCESS,
+    "revoked": TaskState.REVOKED,
+    "rejected": TaskState.REJECTED,
+}
 
 
 @dataclass
