@@ -71,5 +71,5 @@ class CeleryExporter:
         thread.
         """
         host, port = self._listen_address.split(":")
-        logging.info("Starting HTTPD on {}:{}".format(host, port))
+        logging.info(f"Starting HTTPD on {host}:{port}")
         prometheus_client.start_http_server(int(port), host)

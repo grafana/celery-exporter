@@ -137,9 +137,7 @@ def main(
         try:
             transport_options = json.loads(transport_options)
         except ValueError:
-            logging.error(
-                "Error parsing broker transport options from JSON '{}'".format(transport_options)
-            )
+            logging.error(f"Error parsing broker transport options from JSON '{transport_options}'")
             sys.exit(1)
 
     broker_use_ssl = generate_broker_use_ssl(
