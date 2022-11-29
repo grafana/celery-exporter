@@ -3,6 +3,9 @@
 
 DOCKER_REPO="grafana/celery-exporter"
 DOCKER_VERSION="latest"
+VOLUMES = -v $(PWD):/app
+
+docker_shell = docker run --rm -it $(VOLUMES) $(DOCKER_REPO):dev /bin/ash -c $(1)
 
 define PRINT_HELP_PYSCRIPT
 import re, sys
@@ -15,16 +18,7 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-all: clean test docker_build ## Clean and Build
-
-clean: ## Clean folders
-	rm -rf dist/ *.egg-info
-
-test: ## Run tests and coverage
-	coverage run -m pytest test/ \
-  && coverage report
-
-docker_build: ## Build Docker file
+build: ## Build Docker file
 	export DOCKER_REPO
 	export DOCKER_VERSION
 
@@ -36,6 +30,22 @@ docker_build: ## Build Docker file
 		-f ./Dockerfile \
 		-t ${DOCKER_REPO}:${DOCKER_VERSION} \
 		.
+
+build_dev: ## Build development Docker file
+	docker build \
+		-f ./Dockerfile \
+		--target dev \
+		-t ${DOCKER_REPO}:dev \
+		.
+
+run: build ## Run in docker container
+	docker run --rm -p 9540:9540 ${DOCKER_REPO}:${DOCKER_VERSION}
+
+test: build_dev ## Run tests and coverage
+	$(docker_shell) "coverage run -m pytest && coverage report"
+
+sh: build_dev ## Shell into development container
+	$(docker_shell) /bin/ash
 
 help: ## Print this help
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
