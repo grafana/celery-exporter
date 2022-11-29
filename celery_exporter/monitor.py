@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from typing import Dict, List, Set
 
 import amqp
 import celery
@@ -9,7 +10,7 @@ from celery.utils.objects import FallbackContext
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
-from .celery_state import CeleryState
+from .celery_state import CeleryState, Event
 from .metrics import LATENCY, TASKS, TASKS_RUNTIME
 from .utils import get_config
 
@@ -20,44 +21,40 @@ class TaskThread(threading.Thread):
     exposed from Celery using its eventing system.
     """
 
-    def __init__(self, app, namespace, max_tasks_in_memory: int, *args, **kwargs):
+    def __init__(
+        self, app: celery.Celery, namespace: str, max_tasks_in_memory: int, *args, **kwargs
+    ):
         self._app = app
         self._namespace = namespace
         self.log = logging.getLogger("task-thread")
         self._state = CeleryState.new(max_tasks_in_memory=max_tasks_in_memory)
-        self._known_states = set()
-        self._known_states_names = set()
-        self._tasks_started = dict()
+        self._known_states: Set = set()
+        self._known_states_names: Set = set()
+        self._tasks_started: Dict = dict()
         super(TaskThread, self).__init__(*args, **kwargs)
 
     def run(self):  # pragma: no cover
         self._monitor()
 
-    def _process_event(self, evt):
-        (name, queue, latency) = self._state.latency(evt)
+    def _process_event(self, event: Event):
+        (name, queue, latency) = self._state.latency(event)
         if latency is not None:
-            LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(
-                latency
-            )
-        (name, state, runtime, queue) = self._state.collect(evt)
+            LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(latency)
+        (name, state, runtime, queue) = self._state.collect(event)
 
         if name is not None:
             if runtime is not None:
-                TASKS_RUNTIME.labels(
-                    namespace=self._namespace, name=name, queue=queue
-                ).observe(runtime)
+                TASKS_RUNTIME.labels(namespace=self._namespace, name=name, queue=queue).observe(
+                    runtime
+                )
 
-            TASKS.labels(
-                namespace=self._namespace, name=name, state=state, queue=queue
-            ).inc()
+            TASKS.labels(namespace=self._namespace, name=name, state=state, queue=queue).inc()
 
     def _monitor(self):  # pragma: no cover
         while True:
             try:
                 with self._app.connection() as conn:
-                    recv = self._app.events.Receiver(
-                        conn, handlers={"*": self._process_event}
-                    )
+                    recv = self._app.events.Receiver(conn, handlers={"*": self._process_event})
                     setup_metrics(self._app, self._namespace)
                     self.log.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
@@ -70,7 +67,7 @@ class TaskThread(threading.Thread):
 class WorkerCollector(Collector):
     celery_ping_timeout_seconds = 5
 
-    def __init__(self, app, namespace):
+    def __init__(self, app: celery.Celery, namespace: str):
         self._app = app
         self._namespace = namespace
 
@@ -91,7 +88,7 @@ class WorkerCollector(Collector):
 class EnableEventsThread(threading.Thread):
     periodicity_seconds = 5
 
-    def __init__(self, app, *args, **kwargs):  # pragma: no cover
+    def __init__(self, app: celery.Celery, *args, **kwargs):  # pragma: no cover
         self._app = app
         self.log = logging.getLogger("enable-events-thread")
         super(EnableEventsThread, self).__init__(*args, **kwargs)
@@ -109,7 +106,7 @@ class EnableEventsThread(threading.Thread):
 
 
 class QueueLengthCollector(Collector):
-    def __init__(self, app, queue_list):
+    def __init__(self, app: celery.Celery, queue_list: List):
         self.celery_app = app
         self.queue_list = queue_list
         self.connection = self.celery_app.connection_or_acquire()
@@ -132,7 +129,8 @@ class QueueLengthCollector(Collector):
                 ).message_count
 
             except (amqp.exceptions.ChannelError,) as e:
-                # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as a missing queue.
+                # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as
+                # a missing queue.
                 if "NOT_FOUND" not in str(e):
                     logging.warning(f"Unexpected error fetching queue: '{queue}': {e}")
                 length = 0
@@ -141,7 +139,7 @@ class QueueLengthCollector(Collector):
         yield gauge
 
 
-def setup_metrics(app, namespace):
+def setup_metrics(app: celery.Celery, namespace: str):
     """
     This initializes the available metrics with default values so that
     even before the first event is received, data can be exposed.

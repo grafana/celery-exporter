@@ -1,12 +1,15 @@
 import ssl
 from itertools import chain
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
+
+from celery import Celery
 
 CELERY_DEFAULT_QUEUE = "celery"
 CELERY_MISSING_DATA = "undefined"
 
 
-def _gen_wildcards(name):
+def _gen_wildcards(name: str) -> List[str]:
     chunked = name.split(".")
     res = [name]
     for elem in reversed(chunked):
@@ -15,8 +18,8 @@ def _gen_wildcards(name):
     return res
 
 
-def get_config(app):
-    res = dict()
+def get_config(app: Celery) -> Dict[str, Any]:
+    res: Dict[str, Any] = dict()
     try:
         registered_tasks = app.control.inspect().registered_tasks().values()
         confs = app.control.inspect().conf()
@@ -44,16 +47,21 @@ def get_config(app):
     return res
 
 
-def get_transport_scheme(broker_url):
+def get_transport_scheme(broker_url: str) -> str:
     return urlparse(broker_url)[0]
 
 
 def generate_broker_use_ssl(
-    use_ssl, broker_scheme, ssl_verify, ssl_ca_certs, ssl_certfile, ssl_keyfile
-):
+    use_ssl: bool,
+    broker_scheme: str,
+    ssl_verify: str,
+    ssl_ca_certs,
+    ssl_certfile,
+    ssl_keyfile,
+) -> Optional[Dict[str, Any]]:
     scheme_map = {"redis": "ssl_", "amqp": ""}
 
-    verify_map = {
+    verify_map: Dict[str, ssl.VerifyMode] = {
         "CERT_NONE": ssl.CERT_NONE,
         "CERT_OPTIONAL": ssl.CERT_OPTIONAL,
         "CERT_REQUIRED": ssl.CERT_REQUIRED,

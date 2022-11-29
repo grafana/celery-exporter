@@ -14,7 +14,7 @@ DEFAULT_BUCKETS = {
 
 
 def get_buckets(key: str) -> List[float]:
-    env_var = "CELERY_EXPORTER_{}_BUCKETS".format(key.upper())
+    env_var = f"CELERY_EXPORTER_{key.upper()}_BUCKETS"
     val = os.environ.get(env_var)
     if val is not None:
         try:
