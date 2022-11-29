@@ -10,7 +10,7 @@ from celery.utils.objects import FallbackContext
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
-from .celery_state import CeleryState
+from .celery_state import CeleryState, Event
 from .metrics import LATENCY, TASKS, TASKS_RUNTIME
 from .utils import get_config
 
@@ -36,7 +36,7 @@ class TaskThread(threading.Thread):
     def run(self):  # pragma: no cover
         self._monitor()
 
-    def _process_event(self, event: Dict):
+    def _process_event(self, event: Event):
         (name, queue, latency) = self._state.latency(event)
         if latency is not None:
             LATENCY.labels(namespace=self._namespace, name=name, queue=queue).observe(latency)
