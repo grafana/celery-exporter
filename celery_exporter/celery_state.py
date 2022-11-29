@@ -67,7 +67,7 @@ class Task:
             self.uuid = event.get("uuid", CELERY_MISSING_DATA)
             self.state = TaskState.from_event(state)
             local_received = event.get("local_received")
-            if self.local_received is None:
+            if local_received is None:
                 raise ValueError("Invalid Event: missing local_received")
             elif not (isinstance(local_received, float)):
                 raise TypeError(
