@@ -16,7 +16,7 @@ endef
 export PRINT_HELP_PYSCRIPT
 
 test: build_dev ## Run tests and coverage
-	docker run ${DOCKER_REPO}:dev \
+	docker run --rm ${DOCKER_REPO}:dev \
 		/bin/ash -c "coverage run -m pytest && coverage report"
 
 build: ## Build Docker file
@@ -43,7 +43,7 @@ sh: build_dev ## Shell into development container
 	docker run --rm -it ${DOCKER_REPO}:dev /bin/ash
 
 run: build ## Run in docker container
-	docker run -p 9540:9540 ${DOCKER_REPO}:${DOCKER_VERSION}
+	docker run -p --rm 9540:9540 ${DOCKER_REPO}:${DOCKER_VERSION}
 
 help: ## Print this help
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
