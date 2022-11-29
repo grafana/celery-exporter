@@ -6,6 +6,7 @@ from typing import Dict, List, Set
 import amqp
 import celery
 import celery.states
+from celery.events.receiver import EventReceiver
 from celery.utils.objects import FallbackContext
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
@@ -54,7 +55,9 @@ class TaskThread(threading.Thread):
         while True:
             try:
                 with self._app.connection() as conn:
-                    recv = self._app.events.Receiver(conn, handlers={"*": self._process_event})
+                    recv: EventReceiver = self._app.events.Receiver(
+                        conn, handlers={"*": self._process_event}
+                    )
                     setup_metrics(self._app, self._namespace)
                     self.log.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
