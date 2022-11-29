@@ -4,6 +4,8 @@ import os
 import signal
 import sys
 import time
+from types import FrameType
+from typing import Optional, Union
 
 import click
 
@@ -11,6 +13,14 @@ from .core import CeleryExporter
 from .utils import generate_broker_use_ssl, get_transport_scheme
 
 LOG_FORMAT = "[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
+
+
+def shutdown(signum: Union[int, signal.Signals], frame: Optional[FrameType]):
+    """
+    Shutdown is called if the process receives a TERM/INT signal.
+    """
+    logging.info("Shutting down")
+    sys.exit(0)
 
 
 @click.command(context_settings={"auto_envvar_prefix": "CELERY_EXPORTER"})
@@ -153,13 +163,6 @@ def main(
     )
 
     celery_exporter.start()
-
-    def shutdown(signum, frame):  # pragma: no cover
-        """
-        Shutdown is called if the process receives a TERM/INT signal.
-        """
-        logging.info("Shutting down")
-        sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
