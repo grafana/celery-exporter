@@ -53,7 +53,8 @@ class Task:
     runtime: Optional[float] = None
     state: TaskState = TaskState.UNDEFINED
 
-    def update_from_event(self, event: Dict):
+    @classmethod
+    def from_event(cls, event: Dict) -> "Task":
         kind: Optional[str] = event.get("type")
         if kind is None:
             raise ValueError("Invalid Event: missing type")
@@ -64,8 +65,8 @@ class Task:
         state = splitted[1]
 
         if is_task_event(kind):
-            self.uuid = event.get("uuid", CELERY_MISSING_DATA)
-            self.state = TaskState.from_event(state)
+            uuid = event.get("uuid", CELERY_MISSING_DATA)
+            state = TaskState.from_event(state)
             local_received = event.get("local_received")
             if local_received is None:
                 raise ValueError("Invalid Event: missing local_received")
@@ -73,10 +74,12 @@ class Task:
                 raise TypeError(
                     f"Expected type float for local_received, found {type(local_received)}"
                 )
-            self.local_received = local_received
+            local_received = local_received
 
-            self.name = event.get("name", CELERY_MISSING_DATA)
-            self.runtime = event.get("runtime")
+            name = event.get("name", CELERY_MISSING_DATA)
+            runtime = event.get("runtime", cls.runtime)
+            return cls(uuid, name, local_received, runtime, state)
+        return cls()
 
 
 class CeleryState:
@@ -118,8 +121,7 @@ class CeleryState:
         if not (is_task_event(kind)):
             return (None, None, None, None)
 
-        task = Task()
-        task.update_from_event(event)
+        task = Task.from_event(event)
 
         name: str
         queue: str
@@ -154,8 +156,7 @@ class CeleryState:
         if not (is_task_event(kind)):
             return (None, None, None)
 
-        task = Task()
-        task.update_from_event(event)
+        task = Task.from_event(event)
         if task.state == TaskState.STARTED:
             prev_event = self.tasks.get(task.uuid)
             if prev_event is None:
