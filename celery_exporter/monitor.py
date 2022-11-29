@@ -1,11 +1,11 @@
 import logging
-import threading
-import time
 from typing import Dict, List, Set
 
 import amqp
 import celery
 import celery.states
+from anyio import run, sleep
+from celery.events.receiver import EventReceiver
 from celery.utils.objects import FallbackContext
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
@@ -15,7 +15,7 @@ from .metrics import LATENCY, TASKS, TASKS_RUNTIME
 from .utils import get_config
 
 
-class TaskThread(threading.Thread):
+class TaskThread:
     """
     MonitorThread is the thread that will collect the data that is later
     exposed from Celery using its eventing system.
@@ -33,8 +33,8 @@ class TaskThread(threading.Thread):
         self._tasks_started: Dict = dict()
         super(TaskThread, self).__init__(*args, **kwargs)
 
-    def run(self):  # pragma: no cover
-        self._monitor()
+    def start(self):
+        run(self._monitor)
 
     def _process_event(self, event: Event):
         (name, queue, latency) = self._state.latency(event)
@@ -50,18 +50,20 @@ class TaskThread(threading.Thread):
 
             TASKS.labels(namespace=self._namespace, name=name, state=state, queue=queue).inc()
 
-    def _monitor(self):  # pragma: no cover
+    async def _monitor(self):  # pragma: no cover
         while True:
             try:
                 with self._app.connection() as conn:
-                    recv = self._app.events.Receiver(conn, handlers={"*": self._process_event})
+                    recv: EventReceiver = self._app.events.Receiver(
+                        conn, handlers={"*": self._process_event}
+                    )
                     setup_metrics(self._app, self._namespace)
                     self.log.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
             except Exception:
                 self.log.exception("Connection failed")
                 setup_metrics(self._app, self._namespace)
-                time.sleep(5)
+                await sleep(5)
 
 
 class WorkerCollector(Collector):
@@ -85,7 +87,7 @@ class WorkerCollector(Collector):
             logging.exception("Error while pinging workers")
 
 
-class EnableEventsThread(threading.Thread):
+class EnableEventsThread:
     periodicity_seconds = 5
 
     def __init__(self, app: celery.Celery, *args, **kwargs):  # pragma: no cover
@@ -93,13 +95,16 @@ class EnableEventsThread(threading.Thread):
         self.log = logging.getLogger("enable-events-thread")
         super(EnableEventsThread, self).__init__(*args, **kwargs)
 
-    def run(self):  # pragma: no cover
+    def start(self):
+        run(self._monitor)
+
+    async def _monitor(self):  # pragma: no cover
         while True:
             try:
                 self.enable_events()
             except Exception:
                 self.log.exception("Error while trying to enable events")
-            time.sleep(self.periodicity_seconds)
+            await sleep(self.periodicity_seconds)
 
     def enable_events(self):
         self._app.control.enable_events()
