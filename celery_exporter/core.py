@@ -52,6 +52,7 @@ class CeleryExporter:
             namespace=self._namespace,
             max_tasks_in_memory=self._max_tasks,
         )
+        t.daemon = True
         t.start()
 
         if self._queues:
@@ -61,6 +62,7 @@ class CeleryExporter:
 
         if self._enable_events:
             e = EnableEventsThread(app=self._app)
+            e.daemon = True
             e.start()
 
     def _start_httpd(self):  # pragma: no cover
