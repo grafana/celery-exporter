@@ -9,7 +9,12 @@ from celery.utils import uuid
 from celery_test_utils import BaseTest, get_celery_app
 from prometheus_client import REGISTRY
 
-from celery_exporter.monitor import EnableEventsThread, TaskThread, WorkerCollector, setup_metrics
+from celery_exporter.monitor import (
+    EnableEventsThread,
+    TaskThread,
+    WorkerCollectorThread,
+    setup_metrics,
+)
 from celery_exporter.utils import CELERY_MISSING_DATA, _gen_wildcards
 
 
@@ -19,7 +24,7 @@ class TestMockedCelery(BaseTest):
         with patch.object(Inspect, "conf") as tasks:
             with patch.object(Inspect, "registered_tasks") as registered:
                 tasks.return_value = {
-                    "celery@d6f95e9e24fc": {
+                    "celery@node1": {
                         "task_routes": {"my_task": {}, "trial": {"queue": "deadbeef"}}
                     },
                     "celery@adsqas78e891": {
@@ -27,7 +32,7 @@ class TestMockedCelery(BaseTest):
                     },
                     "celery@12311847jsa2": {},
                 }
-                registered.return_value = {"celery@d6f95e9e24fc": [self.task, "trial"]}
+                registered.return_value = {"celery@node1": [self.task, "trial"]}
                 setup_metrics(self.app, self.namespace)  # reset metrics
 
     def test_initial_metric_values(self):
@@ -49,28 +54,34 @@ class TestMockedCelery(BaseTest):
 
     def test_workers_count(self):
         with patch.object(self.app.control, "ping") as mock_ping:
-            w = WorkerCollector(app=self.app, namespace=self.namespace)
-            REGISTRY.register(w)
+            w = WorkerCollectorThread(app=self.app, namespace=self.namespace)
 
             mock_ping.return_value = []
+            w._ping()
             assert (
                 REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 0
             )
 
-            mock_ping.return_value = [0]  # 1 worker
+            mock_ping.return_value = [{"celery@node1": {"ok": "pong"}}]  # 1 worker
+            w._ping()
             assert (
                 REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 1
             )
 
-            mock_ping.return_value = [0, 0]  # 2 workers
+            mock_ping.return_value = [
+                {"celery@node1": {"ok": "pong"}},
+                {"celery@node2": {"ok": "pong"}},
+            ]  # 2 workers
+            w._ping()
             assert (
                 REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 2
             )
 
             mock_ping.return_value = []
+            w._ping()
             assert (
                 REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
                 == 0

@@ -47,3 +47,9 @@ TASKS = prometheus_client.Counter(
     "Number of task events.",
     ["namespace", "name", "state", "queue"],
 )
+
+WORKERS = prometheus_client.Gauge(
+    "celery_workers",
+    "Number of alive workers.",
+    ["namespace"],
+)

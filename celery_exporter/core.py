@@ -9,7 +9,7 @@ from .monitor import (
     EnableEventsThread,
     QueueLengthCollector,
     TaskThread,
-    WorkerCollector,
+    WorkerCollectorThread,
     setup_metrics,
 )
 
@@ -60,8 +60,13 @@ class CeleryExporter:
             logger.debug("Registering QueueLengthCollector")
             REGISTRY.register(QueueLengthCollector(app=self._app, queue_list=self._queues))
 
-        logger.debug("Registering WorkerCollector")
-        REGISTRY.register(WorkerCollector(app=self._app, namespace=self._namespace))
+        w = WorkerCollectorThread(
+            app=self._app,
+            namespace=self._namespace,
+        )
+        w.daemon = True
+        logger.debug("Starting WorkerCollectorThread")
+        w.start()
 
         if self._enable_events:
             e = EnableEventsThread(app=self._app)
