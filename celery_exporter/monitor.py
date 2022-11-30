@@ -61,8 +61,9 @@ class TaskThread(threading.Thread):
                     setup_metrics(self._app, self._namespace)
                     logger.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
-            except Exception:
-                logger.exception("Connection failed")
+            except Exception as e:
+                logger.error("Connection failed")
+                logger.exception(e)
                 setup_metrics(self._app, self._namespace)
                 time.sleep(5)
 
@@ -86,8 +87,9 @@ class WorkerCollectorThread(threading.Thread):
             try:
                 logger.trace("Pinging workers")
                 self._ping()
-            except Exception:
+            except Exception as e:
                 logger.error("Error while pinging workers")
+                logger.exception(e)
                 time.sleep(5)
 
     def _ping(self):
@@ -109,8 +111,9 @@ class EnableEventsThread(threading.Thread):
         while True:
             try:
                 self.enable_events()
-            except Exception:
-                logger.exception("Error while trying to enable events")
+            except Exception as e:
+                logger.error("Error while trying to enable events")
+                logger.exception(e)
             time.sleep(self.periodicity_seconds)
 
     def enable_events(self):
