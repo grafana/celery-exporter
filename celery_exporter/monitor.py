@@ -1,4 +1,3 @@
-import logging
 import threading
 import time
 from typing import Dict, List, Set
@@ -8,6 +7,7 @@ import celery
 import celery.states
 from celery.events.receiver import EventReceiver
 from celery.utils.objects import FallbackContext
+from loguru import logger
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
@@ -27,7 +27,6 @@ class TaskThread(threading.Thread):
     ):
         self._app = app
         self._namespace = namespace
-        self.log = logging.getLogger("task-thread")
         self._state = CeleryState.new(max_tasks_in_memory=max_tasks_in_memory)
         self._known_states: Set = set()
         self._known_states_names: Set = set()
@@ -59,10 +58,10 @@ class TaskThread(threading.Thread):
                         conn, handlers={"*": self._process_event}
                     )
                     setup_metrics(self._app, self._namespace)
-                    self.log.info("Start capturing events...")
+                    logger.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
             except Exception:
-                self.log.exception("Connection failed")
+                logger.exception("Connection failed")
                 setup_metrics(self._app, self._namespace)
                 time.sleep(5)
 
@@ -85,7 +84,7 @@ class WorkerCollector(Collector):
             )
             yield workers
         except Exception:  # pragma: no cover
-            logging.exception("Error while pinging workers")
+            logger.exception("Error while pinging workers")
 
 
 class EnableEventsThread(threading.Thread):
@@ -93,7 +92,6 @@ class EnableEventsThread(threading.Thread):
 
     def __init__(self, app: celery.Celery, *args, **kwargs):  # pragma: no cover
         self._app = app
-        self.log = logging.getLogger("enable-events-thread")
         super(EnableEventsThread, self).__init__(*args, **kwargs)
 
     def run(self):  # pragma: no cover
@@ -101,7 +99,7 @@ class EnableEventsThread(threading.Thread):
             try:
                 self.enable_events()
             except Exception:
-                self.log.exception("Error while trying to enable events")
+                logger.exception("Error while trying to enable events")
             time.sleep(self.periodicity_seconds)
 
     def enable_events(self):
@@ -135,7 +133,7 @@ class QueueLengthCollector(Collector):
                 # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as
                 # a missing queue.
                 if "NOT_FOUND" not in str(e):
-                    logging.warning(f"Unexpected error fetching queue: '{queue}': {e}")
+                    logger.warning(f"Unexpected error fetching queue: '{queue}': {e}")
                 length = 0
 
             gauge.add_metric([queue], length)

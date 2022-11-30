@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import signal
 import sys
@@ -8,6 +7,7 @@ from types import FrameType
 from typing import Optional, Union
 
 import click
+from loguru import logger
 
 from .core import CeleryExporter
 from .utils import generate_broker_use_ssl, get_transport_scheme
@@ -19,7 +19,7 @@ def shutdown(signum: Union[int, signal.Signals], frame: Optional[FrameType]):
     """
     Shutdown is called if the process receives a TERM/INT signal.
     """
-    logging.info("Shutting down")
+    logger.info("Shutting down")
     sys.exit(0)
 
 
@@ -124,10 +124,9 @@ def main(
     verbose,
 ):  # pragma: no cover
 
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
-    else:
-        logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+    if not verbose:
+        logger.remove()
+        logger.add(sys.stderr, level="INFO")
 
     if tz:
         os.environ["TZ"] = tz
@@ -137,7 +136,7 @@ def main(
         try:
             transport_options = json.loads(transport_options)
         except ValueError:
-            logging.error(f"Error parsing broker transport options from JSON '{transport_options}'")
+            logger.error(f"Error parsing broker transport options from JSON '{transport_options}'")
             sys.exit(1)
 
     broker_use_ssl = generate_broker_use_ssl(

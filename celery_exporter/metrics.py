@@ -1,10 +1,8 @@
-import logging
 import os
 from typing import List
 
 import prometheus_client
-
-log = logging.getLogger(__name__)
+from loguru import logger
 
 INF = float("inf")
 DEFAULT_BUCKETS = {
@@ -20,8 +18,8 @@ def get_buckets(key: str) -> List[float]:
         try:
             buckets = [float(x.strip().lower()) for x in val.split(",")]
         except Exception as e:
-            log.error("Error parsing custom buckets; falling back to defaults")
-            log.exception(e)
+            logger.error("Error parsing custom buckets; falling back to defaults")
+            logger.exception(e)
             buckets = DEFAULT_BUCKETS[key]
         return buckets
     else:

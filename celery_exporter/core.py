@@ -1,8 +1,8 @@
-import logging
 from typing import Any, Dict, Optional, Union
 
 import celery
 import prometheus_client
+from loguru import logger
 from prometheus_client import REGISTRY
 
 from .monitor import (
@@ -53,16 +53,20 @@ class CeleryExporter:
             max_tasks_in_memory=self._max_tasks,
         )
         t.daemon = True
+        logger.debug("Starting TaskThread")
         t.start()
 
         if self._queues:
+            logger.debug("Registering QueueLengthCollector")
             REGISTRY.register(QueueLengthCollector(app=self._app, queue_list=self._queues))
 
+        logger.debug("Registering WorkerCollector")
         REGISTRY.register(WorkerCollector(app=self._app, namespace=self._namespace))
 
         if self._enable_events:
             e = EnableEventsThread(app=self._app)
             e.daemon = True
+            logger.debug("Starting EventsThread")
             e.start()
 
     def _start_httpd(self):  # pragma: no cover
@@ -71,5 +75,5 @@ class CeleryExporter:
         thread.
         """
         host, port = self._listen_address.split(":")
-        logging.info(f"Starting HTTPD on {host}:{port}")
+        logger.info(f"Starting HTTPD on {host}:{port}")
         prometheus_client.start_http_server(int(port), host)
