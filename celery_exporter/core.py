@@ -1,8 +1,8 @@
-import logging
 from typing import Any, Dict, Optional, Union
 
 import celery
 import prometheus_client
+from loguru import logger
 from prometheus_client import REGISTRY
 
 from .monitor import (
@@ -69,5 +69,5 @@ class CeleryExporter:
         thread.
         """
         host, port = self._listen_address.split(":")
-        logging.info(f"Starting HTTPD on {host}:{port}")
+        logger.info(f"Starting HTTPD on {host}:{port}")
         prometheus_client.start_http_server(int(port), host)
