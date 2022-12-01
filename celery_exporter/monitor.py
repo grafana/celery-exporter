@@ -97,8 +97,11 @@ class WorkerCollectorThread(threading.Thread):
     def _ping(self):
         control: Control = self._app.control
         workers_ping = control.ping(timeout=self.celery_ping_timeout_seconds)
-        # avoid edge case where workers_ping could be None
-        if workers_ping is not None:
+
+        if workers_ping is None:
+            # edge case where workers_ping can be None: reset metric to avoid staleness
+            WORKERS.labels(namespace=self._namespace).set(0)
+        else:
             WORKERS.labels(namespace=self._namespace).set(len(workers_ping))
 
 
