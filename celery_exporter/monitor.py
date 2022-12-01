@@ -150,12 +150,16 @@ class QueueLengthCollector(Collector):
                     passive=True,
                     timeout=5,
                 ).message_count
-
             except (amqp.exceptions.ChannelError,) as e:
                 # With a Redis broker, an empty queue "(404) NOT_FOUND" is the same as
                 # a missing queue.
                 if "NOT_FOUND" not in str(e):
-                    logger.warning(f"Unexpected error fetching queue: '{queue}': {e}")
+                    logger.warning("Unexpected error fetching queue '{queue}'")
+                    logger.exception(e)
+                length = 0
+            except Exception as e:
+                logger.warning("Unexpected error fetching queue '{queue}'")
+                logger.exception(e)
                 length = 0
 
             gauge.add_metric([queue], length)
