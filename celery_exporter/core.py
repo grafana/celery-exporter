@@ -52,6 +52,7 @@ class CeleryExporter:
             namespace=self._namespace,
             max_tasks_in_memory=self._max_tasks,
         )
+        t.daemon = True
         logger.debug("Starting TaskThread")
         t.start()
 
@@ -64,6 +65,7 @@ class CeleryExporter:
 
         if self._enable_events:
             e = EnableEventsThread(app=self._app)
+            e.daemon = True
             logger.debug("Starting EventsThread")
             e.start()
 

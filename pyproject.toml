@@ -6,7 +6,6 @@ authors = ["Grafana ML"]
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
-anyio = "^3.6.2"
 cachetools = ">=5.2.0"
 celery = {extras = ["redis"], version = ">=5.2.7"}
 loguru = ">=0.6.0"

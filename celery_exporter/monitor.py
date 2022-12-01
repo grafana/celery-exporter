@@ -1,9 +1,10 @@
+import threading
+import time
 from typing import Dict, List, Set
 
 import amqp
 import celery
 import celery.states
-from anyio import run, sleep
 from celery.events.receiver import EventReceiver
 from celery.utils.objects import FallbackContext
 from loguru import logger
@@ -15,7 +16,7 @@ from .metrics import LATENCY, TASKS, TASKS_RUNTIME
 from .utils import get_config
 
 
-class TaskThread:
+class TaskThread(threading.Thread):
     """
     MonitorThread is the thread that will collect the data that is later
     exposed from Celery using its eventing system.
@@ -32,8 +33,8 @@ class TaskThread:
         self._tasks_started: Dict = dict()
         super(TaskThread, self).__init__(*args, **kwargs)
 
-    def start(self):
-        run(self._monitor)
+    def run(self):  # pragma: no cover
+        self._monitor()
 
     def _process_event(self, event: Event):
         (name, queue, latency) = self._state.latency(event)
@@ -49,7 +50,7 @@ class TaskThread:
 
             TASKS.labels(namespace=self._namespace, name=name, state=state, queue=queue).inc()
 
-    async def _monitor(self):  # pragma: no cover
+    def _monitor(self):  # pragma: no cover
         while True:
             try:
                 with self._app.connection() as conn:
@@ -62,7 +63,7 @@ class TaskThread:
             except Exception:
                 logger.exception("Connection failed")
                 setup_metrics(self._app, self._namespace)
-                await sleep(5)
+                time.sleep(5)
 
 
 class WorkerCollector(Collector):
@@ -86,23 +87,20 @@ class WorkerCollector(Collector):
             logger.exception("Error while pinging workers")
 
 
-class EnableEventsThread:
+class EnableEventsThread(threading.Thread):
     periodicity_seconds = 5
 
     def __init__(self, app: celery.Celery, *args, **kwargs):  # pragma: no cover
         self._app = app
         super(EnableEventsThread, self).__init__(*args, **kwargs)
 
-    def start(self):
-        run(self._monitor)
-
-    async def _monitor(self):  # pragma: no cover
+    def run(self):  # pragma: no cover
         while True:
             try:
                 self.enable_events()
             except Exception:
                 logger.exception("Error while trying to enable events")
-            await sleep(self.periodicity_seconds)
+            time.sleep(self.periodicity_seconds)
 
     def enable_events(self):
         self._app.control.enable_events()
