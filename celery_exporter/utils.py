@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from celery import Celery
+from loguru import logger
 
 CELERY_DEFAULT_QUEUE = "celery"
 CELERY_MISSING_DATA = "undefined"
@@ -23,7 +24,9 @@ def get_config(app: Celery) -> Dict[str, Any]:
     try:
         registered_tasks = app.control.inspect().registered_tasks().values()
         confs = app.control.inspect().conf()
-    except Exception:  # pragma: no cover
+    except Exception as e:  # pragma: no cover
+        logger.warning("Failed to get celery configuration, falling back to empty default")
+        logger.exception(e)
         return res
 
     default_queues = []

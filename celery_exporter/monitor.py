@@ -5,6 +5,7 @@ from typing import Dict, List, Set
 import amqp
 import celery
 import celery.states
+from celery.app.control import Control
 from celery.events.receiver import EventReceiver
 from celery.utils.objects import FallbackContext
 from loguru import logger
@@ -12,7 +13,7 @@ from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
 from .celery_state import CeleryState, Event
-from .metrics import LATENCY, TASKS, TASKS_RUNTIME
+from .metrics import LATENCY, TASKS, TASKS_RUNTIME, WORKERS
 from .utils import get_config
 
 
@@ -60,31 +61,51 @@ class TaskThread(threading.Thread):
                     setup_metrics(self._app, self._namespace)
                     logger.info("Start capturing events...")
                     recv.capture(limit=None, timeout=None, wakeup=True)
-            except Exception:
-                logger.exception("Connection failed")
+            except Exception as e:
+                logger.error("Connection failed")
+                logger.exception(e)
                 setup_metrics(self._app, self._namespace)
                 time.sleep(5)
 
 
-class WorkerCollector(Collector):
+class WorkerCollectorThread(threading.Thread):
+    """
+    WorkerCollectorThread broadcasts a ping to all workers and updates the
+    `celery_workers` metric accordingly. This is done in a separate thread because
+    the ping operation is blocking until celery_ping_timeout_seconds is reached.
+    """
+
     celery_ping_timeout_seconds = 5
 
-    def __init__(self, app: celery.Celery, namespace: str):
+    def __init__(self, app: celery.Celery, namespace: str, *args, **kwargs):
         self._app = app
         self._namespace = namespace
+        self._collected = False
+        super(WorkerCollectorThread, self).__init__(*args, **kwargs)
 
-    def collect(self):
-        try:
-            workers = GaugeMetricFamily(
-                "celery_workers", "Number of alive workers", labels=["namespace"]
-            )
-            workers.add_metric(
-                [self._namespace],
-                len(self._app.control.ping(timeout=self.celery_ping_timeout_seconds)),
-            )
-            yield workers
-        except Exception:  # pragma: no cover
-            logger.exception("Error while pinging workers")
+    def run(self):  # pragma: no cover
+        while True:
+            try:
+                logger.trace("Pinging workers")
+                self._ping()
+            except Exception as e:
+                logger.error("Error while pinging workers")
+                logger.exception(e)
+                if self._collected:
+                    # only reset metric if we have collected at least once
+                    WORKERS.labels(namespace=self._namespace).set(0)
+                time.sleep(5)
+
+    def _ping(self):
+        control: Control = self._app.control
+        workers_ping = control.ping(timeout=self.celery_ping_timeout_seconds)
+
+        if workers_ping is None:
+            # edge case where workers_ping can be None: reset metric to avoid staleness
+            WORKERS.labels(namespace=self._namespace).set(0)
+        else:
+            WORKERS.labels(namespace=self._namespace).set(len(workers_ping))
+        self._collected = True
 
 
 class EnableEventsThread(threading.Thread):
@@ -98,8 +119,9 @@ class EnableEventsThread(threading.Thread):
         while True:
             try:
                 self.enable_events()
-            except Exception:
-                logger.exception("Error while trying to enable events")
+            except Exception as e:
+                logger.error("Error while trying to enable events")
+                logger.exception(e)
             time.sleep(self.periodicity_seconds)
 
     def enable_events(self):
@@ -156,3 +178,4 @@ def setup_metrics(app: celery.Celery, namespace: str):
             LATENCY.labels(namespace=namespace, name=task, queue=queue)
             for state in celery.states.ALL_STATES:
                 TASKS.labels(namespace=namespace, name=task, state=state, queue=queue)
+        WORKERS.labels(namespace=namespace)
