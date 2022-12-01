@@ -80,6 +80,7 @@ class WorkerCollectorThread(threading.Thread):
     def __init__(self, app: celery.Celery, namespace: str, *args, **kwargs):
         self._app = app
         self._namespace = namespace
+        self._collected = False
         super(WorkerCollectorThread, self).__init__(*args, **kwargs)
 
     def run(self):  # pragma: no cover
@@ -90,8 +91,9 @@ class WorkerCollectorThread(threading.Thread):
             except Exception as e:
                 logger.error("Error while pinging workers")
                 logger.exception(e)
-                # reset the metric so we don't have stale metrics shown forever
-                WORKERS.labels(namespace=self._namespace).set(0)
+                if self._collected:
+                    # only reset metric if we have collected at least once
+                    WORKERS.labels(namespace=self._namespace).set(0)
                 time.sleep(5)
 
     def _ping(self):
@@ -103,6 +105,7 @@ class WorkerCollectorThread(threading.Thread):
             WORKERS.labels(namespace=self._namespace).set(0)
         else:
             WORKERS.labels(namespace=self._namespace).set(len(workers_ping))
+        self._collected = True
 
 
 class EnableEventsThread(threading.Thread):
