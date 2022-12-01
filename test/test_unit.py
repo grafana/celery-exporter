@@ -80,6 +80,20 @@ class TestMockedCelery(BaseTest):
                 == 2
             )
 
+            mock_ping.return_value = None  # edge case
+            w._ping()
+            assert (
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
+                == 0
+            )
+
+            mock_ping.return_value = [{"celery@node1": {"ok": "pong"}}]  # 1 worker
+            w._ping()
+            assert (
+                REGISTRY.get_sample_value("celery_workers", labels=dict(namespace=self.namespace))
+                == 1
+            )
+
             mock_ping.return_value = []
             w._ping()
             assert (
