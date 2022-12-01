@@ -90,6 +90,8 @@ class WorkerCollectorThread(threading.Thread):
             except Exception as e:
                 logger.error("Error while pinging workers")
                 logger.exception(e)
+                # reset the metric so we don't have stale metrics shown forever
+                WORKERS.labels(namespace=self._namespace).set(0)
                 time.sleep(5)
 
     def _ping(self):
