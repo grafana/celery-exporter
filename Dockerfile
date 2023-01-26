@@ -1,4 +1,4 @@
-FROM python:3.10-alpine as poetry-export
+FROM python:3.11-alpine as poetry-export
 # requires deps for poetry setup
 RUN apk add libffi-dev build-base
 # pin the version of poetry we install
@@ -21,14 +21,18 @@ COPY celery_exporter  /build/celery_exporter
 # build the project wheel
 RUN poetry build
 
-FROM python:3.10-alpine as build-wheels
-RUN apk add alpine-sdk
+FROM python:3.11-alpine as build-wheels
+# alpine-sdk is required for hiredis
+# libffi-dev is required for cffi
+RUN apk add alpine-sdk libffi-dev
 WORKDIR /src
 # hiredis requires gcc, so build the wheel here
 RUN pip wheel hiredis -w /src/wheelhouse
+# cffi has no py311 wheels
+RUN pip wheel cffi -w /src/wheelhouse
 
 ## Shared base ##
-FROM python:3.10-alpine as base-image
+FROM python:3.11-alpine as base-image
 WORKDIR /build
 COPY --from=build-wheels /src/wheelhouse/ /build/wheelhouse/
 RUN pip install wheelhouse/*.whl
