@@ -2,7 +2,7 @@ FROM python:3.11-alpine as poetry-export
 # requires deps for poetry setup
 RUN apk add libffi-dev build-base
 # pin the version of poetry we install
-ENV POETRY_VERSION=1.2.2 \
+ENV POETRY_VERSION=1.3.2 \
   # make poetry install to this location so we can add it to PATH
   POETRY_HOME="/opt/.poetry"
 # setup poetry
