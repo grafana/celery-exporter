@@ -1,8 +1,8 @@
-FROM python:3.10-alpine as poetry-export
+FROM python:3.11-alpine as poetry-export
 # requires deps for poetry setup
 RUN apk add libffi-dev build-base
 # pin the version of poetry we install
-ENV POETRY_VERSION=1.2.2 \
+ENV POETRY_VERSION=1.3.2 \
   # make poetry install to this location so we can add it to PATH
   POETRY_HOME="/opt/.poetry"
 # setup poetry
@@ -21,17 +21,26 @@ COPY celery_exporter  /build/celery_exporter
 # build the project wheel
 RUN poetry build
 
-FROM python:3.10-alpine as build-wheels
-RUN apk add alpine-sdk
+FROM python:3.11-alpine as build-wheels
+# cffi: needs gcc (alpine-sdk) and libffi-dev
+RUN apk add gcc libc-dev libffi-dev
 WORKDIR /src
-# hiredis requires gcc, so build the wheel here
-RUN pip wheel hiredis -w /src/wheelhouse
+# make sure we have a wheelhouse directory to copy
+RUN mkdir -p /src/wheelhouse
+# cffi has no py311 musllinux aarch64 wheels
+RUN if [ $(uname -m) == aarch64 ]; then \
+  pip wheel cffi -w /src/wheelhouse; \
+  fi
 
 ## Shared base ##
-FROM python:3.10-alpine as base-image
+FROM python:3.11-alpine as base-image
 WORKDIR /build
 COPY --from=build-wheels /src/wheelhouse/ /build/wheelhouse/
-RUN pip install wheelhouse/*.whl
+# wheelhouse can be empty, so check if there are any wheels first
+RUN if ls wheelhouse/*.whl; then \
+  pip install wheelhouse/*.whl; \
+  fi
+
 # install requirements separately for improved caching
 COPY --from=poetry-export /build/requirements.txt /build/requirements.txt
 RUN pip install -r requirements.txt
