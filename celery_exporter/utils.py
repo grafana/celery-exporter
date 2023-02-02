@@ -26,7 +26,7 @@ def get_config(app: Celery) -> Dict[str, Any]:
         confs = app.control.inspect().conf()
     except Exception as e:  # pragma: no cover
         logger.warning("Failed to get celery configuration, falling back to empty default")
-        logger.exception(e)
+        logger.opt(exception=True).warning(e)
         return res
 
     default_queues = []
