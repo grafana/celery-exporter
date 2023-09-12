@@ -11,18 +11,16 @@ platform:
 
 steps:
   # Push the docker image on main/tags.
-  - name: Push Docker Image
+  - name: Build and push Docker Image
     image: plugins/docker
+    environment:
+      DOCKER_BUILDKIT: 1
     settings:
       repo: grafana/celery-exporter
-      config:
-        from_secret: dockerconfigjson
-      build_args:
-        - DOCKER_REPO=grafana/celery-exporter
-        - DOCKER_VERSION=latest
-        - VCS_REF=$DRONE_COMMIT_SHA
-      tags:
-        - latest
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
     when:
       ref:
         - refs/heads/main
@@ -30,14 +28,15 @@ steps:
         - refs/tags/v*.*.*
 
 ---
-kind: secret
-name: dockerconfigjson
+# Dockerhub
 get:
-  path: secret/data/common/gcr
-  name: .dockerconfigjson
+  name: username
+  path: infra/data/ci/docker_hub
+kind: secret
+name: docker_username
 ---
-kind: secret
-name: gcr_admin
 get:
-  path: infra/data/ci/gcr-admin
-  name: .dockerconfigjson
+  name: password
+  path: infra/data/ci/docker_hub
+kind: secret
+name: docker_password
