@@ -62,3 +62,19 @@ sh: build_dev ## Shell into development container
 help: ## Print this help
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
           
+
+
+push: ## Build and push multiarch Docker file
+	export DOCKER_REPO
+	export DOCKER_VERSION
+
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--build-arg DOCKER_REPO=${DOCKER_REPO} \
+		--build-arg VERSION=${DOCKER_VERSION} \
+		--build-arg VCS_REF=`git rev-parse --short HEAD` \
+		--build-arg BUILD_DATE=`date -u +”%Y-%m-%dT%H:%M:%SZ”` \
+		-f ./Dockerfile \
+		-t ${DOCKER_REPO}:${DOCKER_VERSION} \
+		--push \
+		.
