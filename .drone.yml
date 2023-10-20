@@ -91,7 +91,6 @@ steps:
       - linux/amd64
       - linux/arm64
       tags:
-      - {DRONE_TAG}
       - latest
       target: grafana/celery-exporter:${DRONE_COMMIT_SHA:0:10}
       template: grafana/celery-exporter:${DRONE_COMMIT_SHA:0:10}-OS-ARCH
