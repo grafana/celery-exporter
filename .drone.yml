@@ -1,0 +1,120 @@
+---
+# Build and push 'latest' Docker image.
+
+kind: pipeline
+type: docker
+name: docker-linux-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  # Push the docker image on main/tags.
+  - name: Build and push Docker image
+    image: plugins/docker
+    environment:
+      DOCKER_BUILDKIT: 1
+    settings:
+      repo: grafana/celery-exporter
+      cache_from: grafana/celery-exporter:latest
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+      tags:
+      - ${DRONE_COMMIT_SHA:0:10}-linux-amd64
+    when:
+      ref:
+        - refs/heads/main
+        - refs/heads/add-drone
+        - refs/tags/v*.*.*
+
+---
+# Build and push 'latest' Docker image.
+
+kind: pipeline
+type: docker
+name: docker-linux-arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+  # Push the docker image on main/tags.
+  - name: Build and push Docker image
+    image: plugins/docker
+    environment:
+      DOCKER_BUILDKIT: 1
+    settings:
+      repo: grafana/celery-exporter
+      cache_from: grafana/celery-exporter:latest
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+      tags:
+      - ${DRONE_COMMIT_SHA:0:10}-linux-arm64
+    when:
+      ref:
+        - refs/heads/main
+        - refs/heads/add-drone
+        - refs/tags/v*.*.*
+
+---
+# Build and push 'latest' Docker image.
+
+kind: pipeline
+type: docker
+name: docker-manifest
+
+platform:
+  os: linux
+  arch: arm64
+
+depends_on:
+- docker-linux-amd64
+- docker-linux-arm64
+
+steps:
+  # Push the docker image on main/tags.
+  - name: manifest
+    image: plugins/manifest
+    settings:
+      repo: grafana/celery-exporter
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+      platforms:
+      - linux/amd64
+      - linux/arm64
+      tags:
+      - latest
+      target: grafana/celery-exporter:${DRONE_COMMIT_SHA:0:10}
+      template: grafana/celery-exporter:${DRONE_COMMIT_SHA:0:10}-OS-ARCH
+    when:
+      ref:
+        - refs/heads/main
+        - refs/heads/add-drone
+        - refs/tags/v*.*.*
+
+---
+# Dockerhub
+get:
+  name: username
+  path: infra/data/ci/docker_hub
+kind: secret
+name: docker_username
+---
+get:
+  name: password
+  path: infra/data/ci/docker_hub
+kind: secret
+name: docker_password
+---
+kind: signature
+hmac: 0c3a6d6a16331500a97b98314c440974ed7c5fbe39ee567162bdcecdf467f84c
+
+...

@@ -59,6 +59,10 @@ format: build_dev ## Apply black + isort formatting
 sh: build_dev ## Shell into development container
 	$(docker_shell) /bin/ash
 
+drone: ## Lint and signe .drone.yml
+	drone lint .drone.yml
+	drone sign --save grafana/celery-exporter .drone.yml
+
 help: ## Print this help
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
           
