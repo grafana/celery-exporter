@@ -17,6 +17,7 @@ steps:
       DOCKER_BUILDKIT: 1
     settings:
       repo: grafana/celery-exporter
+      cache_from: grafana/celery-exporter:latest
       password:
         from_secret: docker_password
       username:
@@ -48,6 +49,7 @@ steps:
       DOCKER_BUILDKIT: 1
     settings:
       repo: grafana/celery-exporter
+      cache_from: grafana/celery-exporter:latest
       password:
         from_secret: docker_password
       username:
