@@ -71,6 +71,10 @@ platform:
   os: linux
   arch: arm64
 
+depends_on:
+- docker-linux-amd64
+- docker-linux-arm64
+
 steps:
   # Push the docker image on main/tags.
   - name: manifest
