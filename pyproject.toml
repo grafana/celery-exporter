@@ -20,7 +20,7 @@ flake8-isort = "6.0.0"
 isort = "5.12.0"
 mypy = "0.991"
 pytest = "7.2.1"
-types-cachetools = "5.2.1"
+types-cachetools = "5.5.0.20240820"
 types-redis = "4.4.0.4"
 
 [tool.black]
