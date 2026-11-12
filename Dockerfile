@@ -1,4 +1,4 @@
-FROM python:3.11-alpine as poetry-export
+FROM python:3.14-alpine@sha256:a18b20ad69e74df6cf6d2e1b1a260d7a1ecf5380fd83b310f83ba88c461cf894 as poetry-export
 # requires deps for poetry setup
 RUN apk add libffi-dev build-base
 # pin the version of poetry we install
@@ -21,7 +21,7 @@ COPY celery_exporter  /build/celery_exporter
 # build the project wheel
 RUN poetry build
 
-FROM python:3.11-alpine as build-wheels
+FROM python:3.14-alpine@sha256:a18b20ad69e74df6cf6d2e1b1a260d7a1ecf5380fd83b310f83ba88c461cf894 as build-wheels
 # cffi: needs gcc (alpine-sdk) and libffi-dev
 RUN apk add gcc libc-dev libffi-dev
 WORKDIR /src
@@ -33,7 +33,7 @@ RUN if [ $(uname -m) == aarch64 ]; then \
   fi
 
 ## Shared base ##
-FROM python:3.11-alpine as base-image
+FROM python:3.14-alpine@sha256:a18b20ad69e74df6cf6d2e1b1a260d7a1ecf5380fd83b310f83ba88c461cf894 as base-image
 WORKDIR /build
 COPY --from=build-wheels /src/wheelhouse/ /build/wheelhouse/
 # wheelhouse can be empty, so check if there are any wheels first
